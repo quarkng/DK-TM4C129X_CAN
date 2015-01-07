@@ -8,8 +8,8 @@
 #include <stdbool.h>
 
 #include "__CANExample.h"
-#include "inc/hw_can.h"
 #include "inc/hw_ints.h"
+#include "inc/hw_can.h"
 #include "inc/hw_memmap.h"
 #include "driverlib/can.h"
 #include "driverlib/gpio.h"
@@ -19,14 +19,17 @@
 #include "driverlib/sysctl.h"
 //#include "driverlib/uart.h"
 
-
-#define CAN_BASE CAN0_BASE
+#define REG32(x)  (*((volatile uint32_t *) (x) ))
+#define CAN_BASE            CAN0_BASE
+#define SYSCTL_PERIPH_CAN   SYSCTL_PERIPH_CAN0
 
 int32_t CANExampleISR_Hits = 0;
 
 //****************************************************************************************
 static void Setup( uint32_t ui32SysClock );
+static void SetAsLoopback( void );
 static void Test( void );
+
 
 //****************************************************************************************
 void CANExample( uint32_t ui32SysClock )
@@ -121,24 +124,49 @@ void CANExample_ISR( void )
 //****************************************************************************************
 void Setup( uint32_t ui32SysClock )
 {
-	tCANBitClkParms CANBitClk;
+//	tCANBitClkParms CANBitClk;
 
-	//
+	// Configure GPIO for CAN
+	GPIOPinConfigure(GPIO_PT0_CAN0RX);
+	GPIOPinConfigure(GPIO_PT1_CAN0TX);
+
+	GPIOPinTypeCAN(GPIO_PORTT_BASE,	GPIO_PIN_0 | GPIO_PIN_1 );
+
+    // The CAN peripheral must be enabled.
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_CAN);
+
 	// Reset the state of all the message objects and the state of the CAN
 	// module to a known state.
-	//
 	CANInit(CAN_BASE);
 
 	// Configure the controller for 1 Mbit operation.
 	//
 	CANBitRateSet(CAN_BASE, ui32SysClock, 1000000);
 
-	//
-	// Take the CAN0 device out of INIT state.
-	//
+	// Enable interrupts on the CAN peripheral
+	CANIntEnable(CAN_BASE, CAN_INT_MASTER | CAN_INT_ERROR | CAN_INT_STATUS);
+
+    // Enable the CAN interrupt on the processor (NVIC).
+#if CAN_BASE == CAN0_BASE
+    IntEnable(INT_CAN0);
+#elif CAN_BASE == CAN1_BASE
+    IntEnable(INT_CAN1);
+#else
+	#error Bad CAN_BASE
+#endif
+
+	// Take the CAN device out of INIT state.
 	CANEnable(CAN_BASE);
+
+	SetAsLoopback();
 }
 
+//****************************************************************************************
+void SetAsLoopback( void )
+{
+	REG32( CAN_BASE + CAN_O_CTL ) |= CAN_CTL_TEST;
+	REG32( CAN_BASE + CAN_O_TST ) |= CAN_TST_LBACK;
+}
 
 //****************************************************************************************
 void Test( void )
@@ -152,101 +180,15 @@ void Test( void )
 	//
 	// Configure and start transmit of message object.
 	//
-//	sMsgObjectTx.ulMsgID = 0x400;
-//	sMsgObjectTx.ulFlags = 0;
-//	sMsgObjectTx.ulMsgLen = 8;
-//	sMsgObjectTx.pucMsgData = pui8BufferOut;
-//	CANMessageSet(CAN_BASE, 2, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+	sMsgObjectTx.ui32MsgID = 0x400;
+	sMsgObjectTx.ui32MsgIDMask = 0;
+	sMsgObjectTx.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
+	sMsgObjectTx.ui32MsgLen = 8;
+	sMsgObjectTx.pui8MsgData = pui8BufferOut;
 
+    // Send the CAN message using object number 1 (not the same thing as
+    // CAN ID, which is 0x400 in this example).  This function will cause
+    // the message to be transmitted right away.
+	CANMessageSet(CAN_BASE, 1, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
 }
 
-
-
-
-#if 0
-
-
-//========================================
-#define ENABLE_DEST_UART
-#define ENABLE_DEST_FILE
-#define ENABLE_DEST_CONSOLE
-//========================================
-
-
-#ifdef ENABLE_DEST_UART
-	#include <TraceDestUart.h>
-	#include <HwAbUart.h>
-	static int8_t destUartHandle;
-#endif
-#ifdef ENABLE_DEST_FILE
-	#include <TraceDestFile.h>
-	static int8_t destFileHandle;
-#endif
-#ifdef ENABLE_DEST_CONSOLE
-	#include <TraceDestConsole.h>
-	static int8_t destConsoleHandle;
-#endif
-
-//****************************************************************************************
-static void SetupLogging( void );
-static void TestLogging( void );
-
-//****************************************************************************************
-void LogTraceExample( void )
-{
-
-    SetupLogging();
-
-    TestLogging();
-}
-
-//****************************************************************************************
-static void SetupLogging( void )
-{
-	LogTrace_Init();
-
-
-#ifdef ENABLE_DEST_UART
-	{
-		static TraceDestUart_t destUart;
-		TraceDestUart_Init( &destUart, &HwAbUart_Send, &HwAbUart_SendString );
-		destUartHandle = LogTrace_AddTraceDestination(&destUart.base, LogTraceLevel_VERBOSE);
-	}
-#endif
-#ifdef ENABLE_DEST_FILE
-	{
-		static TraceDestFile_t destFile;
-		TraceDestFile_Init( &destFile, "LogTest.txt");
-		destFileHandle = LogTrace_AddTraceDestination(&destFile.base, LogTraceLevel_VERBOSE);
-	}
-#endif
-#ifdef ENABLE_DEST_CONSOLE
-	{
-		static TraceDestConsole_t destConsole;
-		TraceDestConsole_Init( &destConsole );
-		destConsoleHandle = LogTrace_AddTraceDestination(&destConsole.base, LogTraceLevel_VERBOSE);
-	}
-#endif
-}
-
-//****************************************************************************************
-static void TestLogging( void )
-{
-	static const char group[] = "TEST_LOG";
-	static const char bytes[] = {0xAB, 0xCD, 0xEF};
-
-	LogTrace_Write(LogTraceLevel_INFO,    group, "Test log INFO message" );
-	LogTrace_Write(LogTraceLevel_VERBOSE, group, "Test log VERBOSE message" );
-
-	LogTrace_WriteHex(LogTraceLevel_ERROR, group, bytes, sizeof(bytes) );
-
-#ifdef ENABLE_DEST_UART
-	LogTrace_SetTraceLevelForDest(destUartHandle, LogTraceLevel_WARNING);
-#endif
-
-	LogTrace_Write(LogTraceLevel_INFO,    group, "Blocked?" );
-	LogTrace_Write(LogTraceLevel_WARNING, group, "Not Blocked?" );
-}
-
-
-#endif

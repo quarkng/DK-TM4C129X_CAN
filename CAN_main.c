@@ -89,16 +89,21 @@ int
 main(void)
 {
     uint32_t ui32SysClock;
-    //
+
     // Run from the PLL at 120 MHz.
-    //
-    ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
-                                      SYSCTL_OSC_MAIN |
-                                      SYSCTL_USE_PLL |
-                                      SYSCTL_CFG_VCO_480), 120000000);
+    ui32SysClock = SysCtlClockFreqSet(	 (SYSCTL_XTAL_25MHZ |
+                                      	  SYSCTL_OSC_MAIN |
+                                      	  SYSCTL_USE_PLL |
+                                      	  SYSCTL_CFG_VCO_480),
+    								120000000);
+
+    // Make sure the main oscillator is enabled.
+    // The SYSCTL_MOSC_HIGHFREQ parameter is used when the crystal
+    // frequency is 10MHz or higher.
+    SysCtlMOSCConfigSet(SYSCTL_MOSC_HIGHFREQ);
 
     //
-    // Configure the device pins.
+    // Initialize the device pinout appropriately for this board.
     //
     PinoutSet();
 
@@ -178,4 +183,13 @@ void InitGraphicsDisplay(uint32_t ui32SysClock)
 
     GrStringDraw(&sContext, "Stop:",       -1,  70, 170, 0);
     GrStringDraw(&sContext, "1 Bit",       -1, 150, 170, 0);
+}
+
+
+
+
+
+void SetLED(uint8_t value)
+{   // Drive the user LED at PQ7
+	ROM_GPIOPinWrite(GPIO_PORTQ_BASE, GPIO_PIN_7, (value)? GPIO_PIN_7 : 0);
 }
