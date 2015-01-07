@@ -35,9 +35,9 @@
 #include "driverlib/uart.h"
 #include "driverlib/rom.h"
 #include "grlib/grlib.h"
-#include "BoardDrivers/kentec320x240x16_ssd2119.h"
-#include "BoardDrivers/frame.h"
-#include "BoardDrivers/pinout.h"
+#include "drivers/kentec320x240x16_ssd2119.h"
+#include "drivers/frame.h"
+#include "drivers/pinout.h"
 
 #include "HwAbUart.h"
 #include "__CANExample.h"

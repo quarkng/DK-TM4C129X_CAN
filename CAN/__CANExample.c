@@ -21,7 +21,7 @@ static void Test( void );
 //****************************************************************************************
 void CANExample( uint32_t ui32SysClock )
 {
-	Setup( uint32_t ui32SysClock );
+	Setup( ui32SysClock );
 	Test();
 }
 

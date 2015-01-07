@@ -58,6 +58,7 @@ extern uint32_t __STACK_TOP;
 //*****************************************************************************
 extern void UARTIntHandler(void);
 
+extern void CAN0IntHandler(void);
 extern void CAN1IntHandler(void);
 
 //*****************************************************************************
