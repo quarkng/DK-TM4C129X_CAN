@@ -13,17 +13,23 @@
 #include "inc/hw_memmap.h"
 #include "driverlib/can.h"
 #include "driverlib/gpio.h"
-#include "driverlib/rom.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
-//#include "driverlib/uart.h"
 
 #define REG32(x)  (*((volatile uint32_t *) (x) ))
+
 #define CAN_BASE            CAN0_BASE
 #define SYSCTL_PERIPH_CAN   SYSCTL_PERIPH_CAN0
 
 int32_t CANExampleISR_Hits = 0;
+
+struct receivedData
+{
+	tCANMsgObject msgObj;
+	uint8_t data[8];
+} rxData;
+
 
 //****************************************************************************************
 static void Setup( uint32_t ui32SysClock );
@@ -39,6 +45,12 @@ void CANExample( uint32_t ui32SysClock )
 }
 
 //****************************************************************************************
+uint32_t cause=0;
+uint32_t stCtrl = 0;
+uint32_t stNewdata = 0;
+uint32_t stTxReq = 0;
+uint32_t stObj = 0;
+
 void CANExample_ISR( void )
 {
     uint32_t canIntStsCause;
@@ -49,76 +61,73 @@ void CANExample_ISR( void )
     // Read the CAN interrupt status to find the cause of the interrupt
     //
 	canIntStsCause = CANIntStatus(CAN_BASE, CAN_INT_STS_CAUSE);
+	cause = canIntStsCause;
 
 	if( canIntStsCause == CAN_INT_INTID_STATUS )
 	{
 		uint32_t canStsControl = CANStatusGet(CAN_BASE, CAN_STS_CONTROL); // also clears status interrupt
+		stCtrl = canStsControl;
+
+		if( canStsControl & CAN_STATUS_BUS_OFF ) // controller is in bus-off condition
+		{
+
+		}
+		if( canStsControl & CAN_STATUS_EWARN ) // an error counter has reached a limit of at least 96
+		{
+
+		}
+		if( canStsControl & CAN_STATUS_EPASS ) // CAN controller is in the error passive state
+		{
+
+		}
+		if( canStsControl & CAN_STS_RXOK ) // a message was received successfully
+		{
+			uint32_t canStsNewdata = CANStatusGet(CAN_BASE, CAN_STS_NEWDAT);
+			stNewdata = canStsNewdata;
+
+		}
+		if( canStsControl & CAN_STS_TXOK ) // a message was successfully transmitted
+		{
+			uint32_t canStsTxRequest = CANStatusGet(CAN_BASE, CAN_STS_TXREQUEST);
+			stTxReq = canStsTxRequest;
+		}
+		switch( canStsControl & CAN_STATUS_LEC_MSK ) // Last Error Code
+		{
+			case CAN_STATUS_LEC_STUFF:	// stuffing error detected
+				break;
+			case CAN_STATUS_LEC_FORM:	// a format error occurred in the fixed format part of a message
+				break;
+			case CAN_STATUS_LEC_ACK:	// a transmitted message was not acknowledged
+				break;
+			case CAN_STATUS_LEC_BIT1: 	// dominant level detected when trying to send in recessive mode
+				break;
+			case CAN_STATUS_LEC_BIT0:	// recessive level detected when trying to send in dominant mode
+				break;
+			case CAN_STATUS_LEC_CRC:	// CRC error in received message
+				break;
+			case CAN_STATUS_LEC_NONE:	// no error
+			default:
+				break;
+		}
 	}
 	else if( canIntStsCause >= 1 && canIntStsCause <= 32)
 	{	// canIntStsCause holds the number of the highest priority message object that has an interrupt pending.
-
-		CANIntClear(CAN0_BASE, 1);
-
-
-		// CANIntClear()
-		// CANMessageGet()
-
 		uint32_t canIntStsObject = CANIntStatus(CAN_BASE, CAN_INT_STS_OBJECT); // bit mask indicating which message objects have pending interrupts
+		stObj = canIntStsObject;
+
+
+		switch(canIntStsCause)
+		{
+			case 1:
+				rxData.data[0] = 0;
+				rxData.msgObj.pui8MsgData = rxData.data;
+				CANMessageGet(CAN_BASE,	canIntStsCause,	&(rxData.msgObj), true);
+				break;
+			default:
+				CANIntClear(CAN_BASE, canIntStsCause);
+				break;
+		}
 	}
-
-
-//    CAN_STS_CONTROL - the main controller status
-//    CAN_STS_TXREQUEST - bit mask of objects pending transmission
-//    CAN_STS_NEWDAT - bit mask of objects with new data
-//    CAN_STS_MSGVAL - bit mask of objects with valid configuration
-
-
-
-//
-//    if( ui32Status & CAN_STS_BOFF ) // Bus-Off Status
-//    {
-//
-//    }
-//    if( ui32Status & CAN_STS_EWARN ) // Warning Status
-//    {
-//
-//    }
-//    if( ui32Status & CAN_STS_EPASS ) // Error Passive
-//    {
-//
-//    }
-//    if( ui32Status & CAN_STS_RXOK ) // Received a Message Successfully
-//    {
-//
-//    }
-//    if( ui32Status & CAN_STS_TXOK ) // Transmitted a Message Successfully
-//    {
-//
-//    }
-//
-//    switch( ui32Status & CAN_STS_LEC_M ) // Last Error Code
-//    {
-//		case CAN_STS_LEC_STUFF:	// Stuff Error
-//			break;
-//		case CAN_STS_LEC_FORM:	// Format Error
-//			break;
-//		case CAN_STS_LEC_ACK:	// ACK Error
-//			break;
-//		case CAN_STS_LEC_BIT1: 	// Bit 1 Error
-//			break;
-//		case CAN_STS_LEC_BIT0:	// Bit 0 Error
-//			break;
-//		case CAN_STS_LEC_CRC:	// CRC Error
-//			break;
-//		case CAN_STS_LEC_NOEVENT:	// No Event
-//			break;
-//
-//		case CAN_STS_LEC_NONE:
-//    	default:
-//    		break;
-//    }
-
-
 }
 
 //****************************************************************************************
@@ -169,26 +178,35 @@ void SetAsLoopback( void )
 }
 
 //****************************************************************************************
+
 void Test( void )
 {
-//	tCANMsgObject sMsgObjectRx;
-//	uint8_t pui8BufferIn[8];
+	tCANMsgObject sMsgObjectRx;
 
 	tCANMsgObject sMsgObjectTx;
 	uint8_t pui8BufferOut[8];
 
-	//
+
+	// Configure receiver object
+	sMsgObjectRx.ui32MsgID = 0x400;
+	sMsgObjectRx.ui32MsgIDMask = 0;
+	sMsgObjectRx.ui32Flags = MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER;
+	sMsgObjectRx.ui32MsgLen = 8;
+	sMsgObjectRx.pui8MsgData = 0;
+	CANMessageSet(CAN_BASE, 1, &sMsgObjectRx, MSG_OBJ_TYPE_RX);
+
 	// Configure and start transmit of message object.
-	//
 	sMsgObjectTx.ui32MsgID = 0x400;
 	sMsgObjectTx.ui32MsgIDMask = 0;
 	sMsgObjectTx.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
 	sMsgObjectTx.ui32MsgLen = 8;
 	sMsgObjectTx.pui8MsgData = pui8BufferOut;
 
+	pui8BufferOut[0] = 42;
+
     // Send the CAN message using object number 1 (not the same thing as
     // CAN ID, which is 0x400 in this example).  This function will cause
     // the message to be transmitted right away.
-	CANMessageSet(CAN_BASE, 1, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+	CANMessageSet(CAN_BASE, 3, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
 }
 
