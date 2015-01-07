@@ -2,7 +2,7 @@
 //
 // touch.h - Prototypes for the touch screen driver.
 //
-// Copyright (c) 2013 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.0.1.11577 of the DK-TM4C129X Firmware Package.
+// This is part of revision 2.1.0.12573 of the DK-TM4C129X Firmware Package.
 //
 //*****************************************************************************
 

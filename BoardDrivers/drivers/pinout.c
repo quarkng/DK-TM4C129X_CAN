@@ -2,7 +2,7 @@
 //
 // pinout.c - Function to configure the device pins on the DK-TM4C129X.
 //
-// Copyright (c) 2013 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.0.1.11577 of the DK-TM4C129X Firmware Package.
+// This is part of revision 2.1.0.12573 of the DK-TM4C129X Firmware Package.
 //
 //*****************************************************************************
 
@@ -185,12 +185,12 @@ PinoutSet(void)
     ROM_GPIOPinConfigure(GPIO_PS5_LCDDATA07);
     ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_6);
     ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_6, GPIO_PIN_6);
-    ROM_GPIOPinTypeLCD(GPIO_PORTF_BASE, GPIO_PIN_7);
-    ROM_GPIOPinTypeLCD(GPIO_PORTJ_BASE, GPIO_PIN_6);
-    ROM_GPIOPinTypeLCD(GPIO_PORTR_BASE,
+    GPIOPinTypeLCD(GPIO_PORTF_BASE, GPIO_PIN_7);
+    GPIOPinTypeLCD(GPIO_PORTJ_BASE, GPIO_PIN_6);
+    GPIOPinTypeLCD(GPIO_PORTR_BASE,
                        (GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
                         GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7));
-    ROM_GPIOPinTypeLCD(GPIO_PORTS_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPinTypeLCD(GPIO_PORTS_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
     //
     // PQ7 is used for the user LED.
@@ -198,6 +198,81 @@ PinoutSet(void)
     ROM_GPIOPinTypeGPIOOutput(GPIO_PORTQ_BASE, GPIO_PIN_7);
     ROM_GPIOPinWrite(GPIO_PORTQ_BASE, GPIO_PIN_7, 0);
 }
+
+//*****************************************************************************
+//
+//! Configures the USB pins for ULPI connection to an external USB PHY.
+//!
+//! This function configures the USB ULPI pins to connect the DK-TM4C129X board
+//! to an external USB PHY in ULPI mode.  This allows the external PHY to act
+//! as an external high-speed phy for the DK-TM4C129X.  This function must be
+//! called after the call to PinoutSet() to properly configure the pins.
+//!
+//! \return None.
+//
+//*****************************************************************************
+#ifdef USE_ULPI
+void
+USBULPIPinoutSet(void)
+{
+    //
+    // Enable all the peripherals that are used by the ULPI interface.
+    //
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOL);
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOP);
+
+    //
+    // ULPI Port B pins.
+    //
+    ROM_GPIOPinConfigure(GPIO_PB2_USB0STP);
+    ROM_GPIOPinConfigure(GPIO_PB3_USB0CLK);
+    ROM_GPIOPinTypeUSBDigital(GPIO_PORTB_BASE, GPIO_PIN_2 | GPIO_PIN_3);
+    GPIOPadConfigSet(GPIO_PORTB_BASE, GPIO_PIN_2 | GPIO_PIN_3,
+                     GPIO_STRENGTH_12MA, GPIO_PIN_TYPE_STD);
+
+    //
+    // ULPI Port P pins.
+    //
+    ROM_GPIOPinConfigure(GPIO_PP2_USB0NXT);
+    ROM_GPIOPinConfigure(GPIO_PP3_USB0DIR);
+    ROM_GPIOPinConfigure(GPIO_PP4_USB0D7);
+    ROM_GPIOPinConfigure(GPIO_PP5_USB0D6);
+    ROM_GPIOPinTypeUSBDigital(GPIO_PORTP_BASE, GPIO_PIN_2 | GPIO_PIN_3 |
+                                               GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPadConfigSet(GPIO_PORTP_BASE,
+                     GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5,
+                     GPIO_STRENGTH_12MA, GPIO_PIN_TYPE_STD);
+
+    //
+    // ULPI Port L pins.
+    //
+    ROM_GPIOPinConfigure(GPIO_PL5_USB0D5);
+    ROM_GPIOPinConfigure(GPIO_PL4_USB0D4);
+    ROM_GPIOPinConfigure(GPIO_PL3_USB0D3);
+    ROM_GPIOPinConfigure(GPIO_PL2_USB0D2);
+    ROM_GPIOPinConfigure(GPIO_PL1_USB0D1);
+    ROM_GPIOPinConfigure(GPIO_PL0_USB0D0);
+    ROM_GPIOPinTypeUSBDigital(GPIO_PORTL_BASE, GPIO_PIN_0 | GPIO_PIN_1 |
+                                               GPIO_PIN_2 | GPIO_PIN_3 |
+                                               GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPadConfigSet(GPIO_PORTL_BASE,
+                     GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+                     GPIO_PIN_4 | GPIO_PIN_5,
+                     GPIO_STRENGTH_12MA, GPIO_PIN_TYPE_STD);
+    //
+    // ULPI Port M pins used to control the external USB oscillator and the
+    // external USB phy on the DK-TM4C129X-DPHY board.
+    //
+    // PM1 - Enables the USB oscillator on the DK-TM4C129X-DPHY board.
+    // PM3 - Enables the USB phy on the DK-TM4C129X-DPHY board.
+    //
+    ROM_GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_1 | GPIO_PIN_3);
+    ROM_GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_1 | GPIO_PIN_3, GPIO_PIN_1 |
+                                                               GPIO_PIN_3);
+}
+#endif
 
 //*****************************************************************************
 //

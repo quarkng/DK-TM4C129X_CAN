@@ -1,6 +1,6 @@
 //*****************************************************************************
 //
-// mx66l51235f.h - Prototypes for the MX66L51235F driver.
+// buttons.h - Prototypes for the DK-TM4C129X development board buttons driver.
 //
 // Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
@@ -22,8 +22,8 @@
 //
 //*****************************************************************************
 
-#ifndef __DRIVERS_MX66L51235F_H__
-#define __DRIVERS_MX66L51235F_H__
+#ifndef __BUTTONS_H__
+#define __BUTTONS_H__
 
 //*****************************************************************************
 //
@@ -38,26 +38,54 @@ extern "C"
 
 //*****************************************************************************
 //
-// The memory size and block size in bytes.
+// Defines for the hardware resources used by the pushbuttons.
+//
+// The switches are on the following ports/pins:
+//
+// PN3 - Up Button      (UP_BUTTON)
+// PE5 - Down Button    (DOWN_BUTTON)
+// PP1 - Select Button  (SELECT_BUTTON)
+//
+// The switches tie the GPIO to ground, so the GPIOs need to be configured
+// with pull-ups, and a value of 0 means the switch is pressed.
 //
 //*****************************************************************************
-#define MX66L51235F_MEMORY_SIZE 0x04000000
-#define MX66L51235F_BLOCK_SIZE  0x1000
+#define NUM_BUTTONS             3
+#define UP_BUTTON               GPIO_PIN_3
+#define DOWN_BUTTON             GPIO_PIN_5
+#define SELECT_BUTTON           GPIO_PIN_1
+
+#define ALL_BUTTONS             (UP_BUTTON | DOWN_BUTTON | SELECT_BUTTON)
 
 //*****************************************************************************
 //
-// Prototypes.
+// Useful macros for detecting button events.
 //
 //*****************************************************************************
-extern void MX66L51235FInit(uint32_t ui32SysClock);
-extern void MX66L51235FSectorErase(uint32_t ui32Addr);
-extern void MX66L51235FBlockErase32(uint32_t ui32Addr);
-extern void MX66L51235FBlockErase64(uint32_t ui32Addr);
-extern void MX66L51235FChipErase(void);
-extern void MX66L51235FPageProgram(uint32_t ui32Addr, const uint8_t *pui8Data,
-                                   uint32_t ui32Count);
-extern void MX66L51235FRead(uint32_t ui32Addr, uint8_t *pui8Data,
-                            uint32_t ui32Count);
+#define BUTTON_PRESSED(button, buttons, changed)                              \
+        (((button) & (changed)) && ((button) & (buttons)))
+
+#define BUTTON_RELEASED(button, buttons, changed)                             \
+        (((button) & (changed)) && !((button) & (buttons)))
+
+//*****************************************************************************
+//
+// If building with a C++ compiler, make all of the definitions in this header
+// have a C binding.
+//
+//*****************************************************************************
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+//*****************************************************************************
+//
+// Functions exported from buttons.c
+//
+//*****************************************************************************
+extern void ButtonsInit(uint8_t ui8Buttons);
+extern uint8_t ButtonsPoll(uint8_t *pui8Delta, uint8_t *pui8Raw);
 
 //*****************************************************************************
 //
@@ -68,4 +96,10 @@ extern void MX66L51235FRead(uint32_t ui32Addr, uint8_t *pui8Data,
 }
 #endif
 
-#endif // __DRIVERS_MX66L51235F_H__
+//*****************************************************************************
+//
+// Prototypes for the globals exported by this driver.
+//
+//*****************************************************************************
+
+#endif // __BUTTONS_H__

@@ -2,7 +2,7 @@
 //
 // sound.c - Sound driver for the speaker on the DK-TM4C129X.
 //
-// Copyright (c) 2013 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.0.1.11577 of the DK-TM4C129X Firmware Package.
+// This is part of revision 2.1.0.12573 of the DK-TM4C129X Firmware Package.
 //
 //*****************************************************************************
 
@@ -75,7 +75,7 @@ typedef struct
     uint32_t ui32Offset;
 
     //
-    // The volume to playback the sound stream.  This will be a value between 0
+    // The volume to playback the sound stream.  This is a value between 0
     // (for silence) and 256 (for full volume).
     //
     int32_t i32Volume;
@@ -91,6 +91,12 @@ typedef struct
     // between the previous and current sound samples.
     //
     int32_t i32Step;
+
+    //
+    // The current requested rate adjustment.  This is cleared when the
+    // the adjustment is made.
+    //
+    int32_t i32RateAdjust;
 
     //
     // The callback function that indicates when half of the sound buffer has
@@ -137,6 +143,17 @@ void
 SoundIntHandler(void)
 {
     int32_t i32DutyCycle;
+
+    //
+    // If there is an adjustment to be made, the apply it and set allow the
+    // update to be done on the next load.
+    //
+    if(g_sSoundState.i32RateAdjust)
+    {
+        g_sSoundState.ui32Period += g_sSoundState.i32RateAdjust;
+        g_sSoundState.i32RateAdjust = 0;
+        TimerLoadSet(TIMER5_BASE, TIMER_A, g_sSoundState.ui32Period);
+    }
 
     //
     // Clear the timer interrupt.
@@ -236,8 +253,8 @@ SoundIntHandler(void)
 
     //
     // Adjust the magnitude of the sample based on the current volume.  Since a
-    // multiplicative volume control is implemented, the volume value will
-    // result in nearly linear volume adjustment if it is squared.
+    // multiplicative volume control is implemented, the volume value
+    // results in nearly linear volume adjustment if it is squared.
     //
     i32DutyCycle = (((i32DutyCycle * g_sSoundState.i32Volume *
                       g_sSoundState.i32Volume) / 65536) + 32768);
@@ -357,7 +374,12 @@ SoundInit(uint32_t ui32SysClock)
     ROM_TimerLoadSet(TIMER5_BASE, TIMER_A, g_sSoundState.ui32Period - 1);
     ROM_TimerMatchSet(TIMER5_BASE, TIMER_A, g_sSoundState.ui32Period);
     ROM_TimerControlLevel(TIMER5_BASE, TIMER_A, true);
-    HWREG(TIMER5_BASE + TIMER_O_TAMR) |= TIMER_TAMR_TAMRSU;
+
+    //
+    // Update the timer values on timeouts and not immediately.
+    //
+    TimerUpdateMode(TIMER5_BASE, TIMER_A, TIMER_UP_LOAD_TIMEOUT |
+                                          TIMER_UP_MATCH_TIMEOUT);
 
     //
     // Configure the timer to generate an interrupt at every time-out event.
@@ -365,7 +387,7 @@ SoundInit(uint32_t ui32SysClock)
     ROM_TimerIntEnable(TIMER5_BASE, TIMER_CAPA_EVENT);
 
     //
-    // Enable the timer.  At this point, the timer will generate an interrupt
+    // Enable the timer.  At this point, the timer generates an interrupt
     // every 15.625 us.
     //
     ROM_TimerEnable(TIMER5_BASE, TIMER_A);
@@ -375,6 +397,27 @@ SoundInit(uint32_t ui32SysClock)
     // Clear the sound flags.
     //
     g_sSoundState.ui32Flags = 0;
+}
+
+//*****************************************************************************
+//
+//! Make adjustments to the sample period of the PWM audio.
+//!
+//! \param i32RateAdjust is a signed value of the adjustment to make to the
+//! current sample period.
+//!
+//! This function allows the sample period to be adjusted if the application
+//! needs to make small adjustments to the playback rate of the audio.  This
+//! should only be used to makke smaller adjustments to the sample rate since
+//! large changes cause distortion in the output.
+//!
+//! \return None.
+//
+//*****************************************************************************
+void
+SoundPeriodAdjust(int32_t i32RateAdjust)
+{
+    g_sSoundState.i32RateAdjust += i32RateAdjust;
 }
 
 //*****************************************************************************
@@ -390,9 +433,9 @@ SoundInit(uint32_t ui32SysClock)
 //! \param pfnCallback is the callback function that is called when either half
 //! of the sound buffer has been played.
 //!
-//! This function will start the playback of a sound stream contained in an
-//! audio ping-pong buffer.  The buffer will be played repeatedly until
-//! SoundStop() is called.  Playback of the sound stream will begin
+//! This function starts the playback of a sound stream contained in an
+//! audio ping-pong buffer.  The buffer is played repeatedly until
+//! SoundStop() is called.  Playback of the sound stream begins
 //! immediately, so the buffer should be pre-filled with the initial sound
 //! data prior to calling this function.
 //!
@@ -558,7 +601,7 @@ SoundBusy(void)
 //! between 0 (for silence) and 255 (for full volume).
 //!
 //! This function sets the volume of the sound playback.  Setting the volume to
-//! 0 will mute the output, while setting the volume to 256 will play the sound
+//! 0 mutes the output, while setting the volume to 256 plays the sound
 //! stream without any volume adjustment (that is, full volume).
 //!
 //! \return None.

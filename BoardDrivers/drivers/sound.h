@@ -2,7 +2,7 @@
 //
 // sound.h - Prototypes for the sound driver.
 //
-// Copyright (c) 2013 Texas Instruments Incorporated.  All rights reserved.
+// Copyright (c) 2013-2014 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
 // 
 // Texas Instruments (TI) is supplying this software for use solely and
@@ -18,7 +18,7 @@
 // CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
 // DAMAGES, FOR ANY REASON WHATSOEVER.
 // 
-// This is part of revision 2.0.1.11577 of the DK-TM4C129X Firmware Package.
+// This is part of revision 2.1.0.12573 of the DK-TM4C129X Firmware Package.
 //
 //*****************************************************************************
 
@@ -46,6 +46,7 @@ extern void SoundInit(uint32_t ui32SysClock);
 extern bool SoundStart(int16_t *pi16Buffer, uint32_t ui32Length,
                        uint32_t ui32Rate,
                        void (*pfnCallback)(uint32_t ui32Half));
+extern void SoundPeriodAdjust(int32_t i32RateAdjust);
 extern void SoundStop(void);
 extern bool SoundBusy(void);
 extern void SoundVolumeSet(int32_t i32Volume);

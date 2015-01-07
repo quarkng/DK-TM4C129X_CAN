@@ -8,11 +8,21 @@
 #include <stdbool.h>
 
 #include "__CANExample.h"
-#include "inc/tm4c129xnczad.h"
+#include "inc/hw_can.h"
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/can.h"
+#include "driverlib/gpio.h"
+#include "driverlib/rom.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/pin_map.h"
+#include "driverlib/sysctl.h"
+//#include "driverlib/uart.h"
 
+
+#define CAN_BASE CAN0_BASE
 
 int32_t CANExampleISR_Hits = 0;
-
 
 //****************************************************************************************
 static void Setup( uint32_t ui32SysClock );
@@ -28,25 +38,125 @@ void CANExample( uint32_t ui32SysClock )
 //****************************************************************************************
 void CANExample_ISR( void )
 {
+    uint32_t canIntStsCause;
+
 	CANExampleISR_Hits++;
 
-    uint32_t ui32Status;
     //
     // Read the CAN interrupt status to find the cause of the interrupt
     //
-//    ui32Status = CANIntStatus(CAN0_BASE, CAN_INT_STS_CAUSE);
+	canIntStsCause = CANIntStatus(CAN_BASE, CAN_INT_STS_CAUSE);
+
+	if( canIntStsCause == CAN_INT_INTID_STATUS )
+	{
+		uint32_t canStsControl = CANStatusGet(CAN_BASE, CAN_STS_CONTROL); // also clears status interrupt
+	}
+	else if( canIntStsCause >= 1 && canIntStsCause <= 32)
+	{	// canIntStsCause holds the number of the highest priority message object that has an interrupt pending.
+
+		CANIntClear(CAN0_BASE, 1);
+
+
+		// CANIntClear()
+		// CANMessageGet()
+
+		uint32_t canIntStsObject = CANIntStatus(CAN_BASE, CAN_INT_STS_OBJECT); // bit mask indicating which message objects have pending interrupts
+	}
+
+
+//    CAN_STS_CONTROL - the main controller status
+//    CAN_STS_TXREQUEST - bit mask of objects pending transmission
+//    CAN_STS_NEWDAT - bit mask of objects with new data
+//    CAN_STS_MSGVAL - bit mask of objects with valid configuration
+
+
+
+//
+//    if( ui32Status & CAN_STS_BOFF ) // Bus-Off Status
+//    {
+//
+//    }
+//    if( ui32Status & CAN_STS_EWARN ) // Warning Status
+//    {
+//
+//    }
+//    if( ui32Status & CAN_STS_EPASS ) // Error Passive
+//    {
+//
+//    }
+//    if( ui32Status & CAN_STS_RXOK ) // Received a Message Successfully
+//    {
+//
+//    }
+//    if( ui32Status & CAN_STS_TXOK ) // Transmitted a Message Successfully
+//    {
+//
+//    }
+//
+//    switch( ui32Status & CAN_STS_LEC_M ) // Last Error Code
+//    {
+//		case CAN_STS_LEC_STUFF:	// Stuff Error
+//			break;
+//		case CAN_STS_LEC_FORM:	// Format Error
+//			break;
+//		case CAN_STS_LEC_ACK:	// ACK Error
+//			break;
+//		case CAN_STS_LEC_BIT1: 	// Bit 1 Error
+//			break;
+//		case CAN_STS_LEC_BIT0:	// Bit 0 Error
+//			break;
+//		case CAN_STS_LEC_CRC:	// CRC Error
+//			break;
+//		case CAN_STS_LEC_NOEVENT:	// No Event
+//			break;
+//
+//		case CAN_STS_LEC_NONE:
+//    	default:
+//    		break;
+//    }
+
+
 }
 
 //****************************************************************************************
 void Setup( uint32_t ui32SysClock )
 {
+	tCANBitClkParms CANBitClk;
 
+	//
+	// Reset the state of all the message objects and the state of the CAN
+	// module to a known state.
+	//
+	CANInit(CAN_BASE);
+
+	// Configure the controller for 1 Mbit operation.
+	//
+	CANBitRateSet(CAN_BASE, ui32SysClock, 1000000);
+
+	//
+	// Take the CAN0 device out of INIT state.
+	//
+	CANEnable(CAN_BASE);
 }
 
 
 //****************************************************************************************
 void Test( void )
 {
+//	tCANMsgObject sMsgObjectRx;
+//	uint8_t pui8BufferIn[8];
+
+	tCANMsgObject sMsgObjectTx;
+	uint8_t pui8BufferOut[8];
+
+	//
+	// Configure and start transmit of message object.
+	//
+//	sMsgObjectTx.ulMsgID = 0x400;
+//	sMsgObjectTx.ulFlags = 0;
+//	sMsgObjectTx.ulMsgLen = 8;
+//	sMsgObjectTx.pucMsgData = pui8BufferOut;
+//	CANMessageSet(CAN_BASE, 2, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
 
 }
 
