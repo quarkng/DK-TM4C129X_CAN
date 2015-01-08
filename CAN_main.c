@@ -189,7 +189,7 @@ void InitGraphicsDisplay(uint32_t ui32SysClock)
 
 
 
-void SetLED(uint8_t value)
+void SetLED(bool value)
 {   // Drive the user LED at PQ7
 	ROM_GPIOPinWrite(GPIO_PORTQ_BASE, GPIO_PIN_7, (value)? GPIO_PIN_7 : 0);
 }

@@ -23,6 +23,7 @@
 #define SYSCTL_PERIPH_CAN   SYSCTL_PERIPH_CAN0
 
 int32_t CANExampleISR_Hits = 0;
+bool    AllTransmitDone = true;
 
 struct receivedData
 {
@@ -90,6 +91,8 @@ void CANExample_ISR( void )
 		{
 			uint32_t canStsTxRequest = CANStatusGet(CAN_BASE, CAN_STS_TXREQUEST);
 			stTxReq = canStsTxRequest;
+
+			AllTransmitDone = (canStsTxRequest == 0);
 		}
 		switch( canStsControl & CAN_STATUS_LEC_MSK ) // Last Error Code
 		{
@@ -178,9 +181,11 @@ void SetAsLoopback( void )
 }
 
 //****************************************************************************************
+extern void SetLED(bool value);
 
 void Test( void )
 {
+	bool ledState = false;
 	tCANMsgObject sMsgObjectRx;
 
 	tCANMsgObject sMsgObjectTx;
@@ -195,18 +200,33 @@ void Test( void )
 	sMsgObjectRx.pui8MsgData = 0;
 	CANMessageSet(CAN_BASE, 1, &sMsgObjectRx, MSG_OBJ_TYPE_RX);
 
-	// Configure and start transmit of message object.
-	sMsgObjectTx.ui32MsgID = 0x400;
-	sMsgObjectTx.ui32MsgIDMask = 0;
-	sMsgObjectTx.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
-	sMsgObjectTx.ui32MsgLen = 8;
-	sMsgObjectTx.pui8MsgData = pui8BufferOut;
 
-	pui8BufferOut[0] = 42;
+	AllTransmitDone = true;
+	SetLED(ledState);
+	pui8BufferOut[0] = 0;
 
     // Send the CAN message using object number 1 (not the same thing as
     // CAN ID, which is 0x400 in this example).  This function will cause
     // the message to be transmitted right away.
-	CANMessageSet(CAN_BASE, 3, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+	for(;;)
+	{
+		if( AllTransmitDone )
+		{
+			AllTransmitDone = false;
+
+			// Configure and start transmit of message object.
+			sMsgObjectTx.ui32MsgID = 0x400;
+			sMsgObjectTx.ui32MsgIDMask = 0;
+			sMsgObjectTx.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
+			sMsgObjectTx.ui32MsgLen = 8;
+			sMsgObjectTx.pui8MsgData = pui8BufferOut;
+			pui8BufferOut[0]++;
+			CANMessageSet(CAN_BASE, 3, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+
+			ledState = ! ledState;
+			SetLED(ledState);
+		}
+	}
+
 }
 
