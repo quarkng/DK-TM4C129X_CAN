@@ -212,6 +212,8 @@ void Test( void )
 	{
 		if( AllTransmitDone )
 		{
+			uint32_t obj_id = 3;
+
 			AllTransmitDone = false;
 
 			// Configure and start transmit of message object.
@@ -220,8 +222,14 @@ void Test( void )
 			sMsgObjectTx.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
 			sMsgObjectTx.ui32MsgLen = 8;
 			sMsgObjectTx.pui8MsgData = pui8BufferOut;
+
 			pui8BufferOut[0]++;
-			CANMessageSet(CAN_BASE, 3, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+			pui8BufferOut[1] = (uint8_t) obj_id;
+			CANMessageSet(CAN_BASE, obj_id++, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+			pui8BufferOut[1] = (uint8_t) obj_id;
+			CANMessageSet(CAN_BASE, obj_id++, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
+			pui8BufferOut[1] = (uint8_t) obj_id;
+			CANMessageSet(CAN_BASE, obj_id++, &sMsgObjectTx, MSG_OBJ_TYPE_TX);
 
 			ledState = ! ledState;
 			SetLED(ledState);

@@ -81,10 +81,6 @@ void CAN1IntHandler(void)
 
 
 //*****************************************************************************
-//
-// This example demonstrates how to send a string of data to the UART.
-//
-//*****************************************************************************
 int
 main(void)
 {
